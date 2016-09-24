@@ -1,0 +1,44 @@
+# Example configuration of running Apache Spark on Solano CI
+# see http://www.robertomarchetto.com/spark_java_maven_example and https://spark.apache.org/
+
+# Specify versions to be available on the Solano CI workers
+# http://docs.solanolabs.com/ConfiguringLanguage/java/#supported-tools-and-versions
+java:
+  java_version: java-8-oracle
+  maven_version: '3.3'
+
+# Typical Java/Maven cache configuration, but include spark installation directory
+cache:
+  key_paths:
+    - pom.xml
+  save_paths:
+    - HOME/.m2    # Maven cache
+    - HOME/spark  # Spark installation path
+
+# Setup hooks (http://docs.solanolabs.com/Setup/setup-hooks/)
+hooks:
+  pre_setup: |
+    set -e  # Exit on error
+    # Ensure spark is installed (for initial build and when cache is invalidated)
+    if [ ! -d $HOME/spark ]; then
+      mkdir -p $HOME/spark/download
+      # url is from an apache mirror
+      curl http://archive.apache.org/dist/spark/spark-1.3.0/spark-1.3.0-bin-hadoop2.4.tgz --output $HOME/spark/download/spark-1.3.0-bin-hadoop2.4.tgz 
+      tar -xzf $HOME/spark/download/spark-1.3.0-bin-hadoop2.4.tgz -C $HOME/spark/
+    fi
+    # Install maven dependencies
+    cd first-example && mvn package
+
+tests:
+  - |
+    set -e # Exit on error
+    cd first-example
+    $HOME/spark/spark-1.3.0-bin-hadoop2.4/bin/spark-submit \
+      --class org.sparkexample.WordCount \
+      --master local[1] \
+      `pwd`/target/first-example-1.0-SNAPSHOT.jar \
+      `pwd`/src/test/resources/loremipsum.txt \
+      build
+    cat build/part-*
+    tar czf $HOME/results/$TDDIUM_SESSION_ID/$TDDIUM_TEST_EXEC_ID/build.tar.gz build/*
+    
