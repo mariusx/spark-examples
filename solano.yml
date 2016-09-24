@@ -10,7 +10,7 @@ java:
 # Typical Java/Maven cache configuration, but include spark installation directory
 cache:
   key_paths:
-    - pom.xml
+    - first-example/pom.xml
   save_paths:
     - HOME/.m2    # Maven cache
     - HOME/spark  # Spark installation path
